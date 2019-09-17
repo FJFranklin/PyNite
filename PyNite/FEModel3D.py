@@ -9,12 +9,34 @@ from numpy import zeros, delete, insert, matmul, subtract
 from numpy.linalg import inv
 from PyNite.Node3D import Node3D
 from PyNite.Member3D import Member3D
+from .Material import Material
+from . import Section
 
 # %%
 class FEModel3D():
     """
     A class representing a 3D finite element model.
     """
+#%%
+    __scene = None  # Don't import VisPy unless and until actually needed
+
+    @staticmethod
+    def __canvas():
+        if FEModel3D.__scene is None:
+            from vispy import scene
+            FEModel3D.__scene  = scene
+
+        canvas = FEModel3D.__scene.SceneCanvas(keys='interactive', size=(1200, 900), show=True)
+
+        # Set up a viewbox to display the cube with interactive arcball
+        view = canvas.central_widget.add_view()
+        view.bgcolor = '#efefef'
+        view.camera  = FEModel3D.__scene.cameras.turntable.TurntableCamera(scale_factor=10)
+        view.padding = 10
+
+        FEModel3D.__scene.visuals.XYZAxis(parent=view.scene)
+
+        return canvas, view
 
 #%% 
     def __init__(self):
@@ -50,7 +72,7 @@ class FEModel3D():
         self.__Nodes.append(newNode)
 
 #%%
-    def AddMember(self, Name, iNode, jNode, E, G, Iy, Iz, J, A):
+    def AddMember(self, Name, iNode, jNode, E, G, Iy, Iz, J, A, ik_ref=None):
         """
         Adds a new member to the model.
         
@@ -74,10 +96,38 @@ class FEModel3D():
             The polar moment of inertia of the member.
         A : number
             The cross-sectional area of the member.
+        ik_ref : 3D coordinate (numpy 1D array), optional
+            reference point in ik-plane of the beam (default is None)
         """
         
         # Create a new member
-        newMember = Member3D(Name, self.GetNode(iNode), self.GetNode(jNode), E, G, Iy, Iz, J, A)
+        material = Material(E, G)
+        section  = Section.Generic(Iy, Iz, J, A)
+        self.AddMemberExt(Name, iNode, jNode, material, section, ik_ref)
+
+#%%
+    def AddMemberExt(self, Name, iNode, jNode, material, section, ik_ref=None):
+        """
+        Adds a new member to the model.
+        
+        Parameters
+        ----------
+        Name : string
+            A unique user-defined name for the member.
+        iNode : string
+            The name of the i-node (start node).
+        jNode : string
+            The name of the j-node (end node).
+        material : Material
+            PyNite Material object
+        section : Section
+            PyNite Section object
+        ik_ref : 3D coordinate (numpy 1D array), optional
+            reference point in ik-plane of the beam (default is None)
+        """
+        
+        # Create a new member
+        newMember = Member3D(Name, self.GetNode(iNode), self.GetNode(jNode), material, section, ik_ref)
         
         # Add the new member to the list
         self.__Members.append(newMember)
@@ -608,3 +658,15 @@ class FEModel3D():
         # Segment all members in the model to make member results available
         for member in self.__Members:
             member.SegmentMember()
+
+#%%  
+    def Display(self):
+        """
+        Displays the members in 3D
+        """
+        canvas, view = FEModel3D.__canvas()
+
+        for member in self.__Members:
+            member.Display(view)
+
+        canvas.app.run()

@@ -5,40 +5,170 @@ Created on Thu Nov  2 18:04:56 2017
 @author: D. Craig Brinck, SE
 """
 # %%
+import numpy as np
 from numpy import zeros, matrix, transpose, add, subtract, matmul, insert
 from numpy.linalg import inv
 from PyNite.BeamSegment import BeamSegment
 import PyNite.FixedEndReactions
-import matplotlib.pyplot as plt
 
 # %%
-class Member3D():
+class MemberBasis(object):
+    """
+    3D Vector Basis for a beam, with origin at start of beam, i-axis along the beam.
+    An optional reference point in the ik-plane (non-colinear with the beam) can be
+    specified to orientate the j- & k-axes of the beam.
+
+    Attributes
+    ----------
+    iNode : Node
+        start of the beam, i.e., the origin of the local coordinate system
+    jNode : Node
+        end of beam, which defines basis vector i
+    L : number
+        length of beam
+    origin : 3D coordinate (numpy 1D array)
+        the origin of the local coordinate system
+    e_i : 3D vector (numpy 1D array)
+        basis vector i
+    e_j : 3D vector (numpy 1D array)
+        basis vector j
+    e_k : 3D vector (numpy 1D array)
+        basis vector k
+    T : 12x12 matrix (numpy 2D array)
+        transformation matrix built from direction cosines
+    T_inverse : 12x12 matrix (numpy 2D array)
+        inverse (transpose) of the transformation matrix
+    """
+#%%
+    @staticmethod
+    def NodeToCoordinate(node):
+        """
+        Convert PyNite Node to 3D coordinate (numpy 1D array)
+
+        Parameters
+        ----------
+        node : PyNite Node
+            coordinate in space
+
+        Returns
+        -------
+        coord : 3D coordinate (numpy 1D array)
+            coordinate in space
+        """
+        return np.asarray([node.X, node.Y, node.Z], dtype=np.float64)
+
+#%%
+    def __init__(self, iNode, jNode, ik_ref=None): # ik_ref must not be colinear with the beam
+        """
+        Parameters
+        ----------
+        iNode : Node
+            start of the beam, i.e., the origin of the local coordinate system
+        jNode : Node
+            end of beam, which defines basis vector i
+        ik_ref : 3D coordinate (numpy 1D array), optional
+            reference point in ik-plane of the beam (default is None)
+        """
+        self.iNode = iNode
+        self.jNode = jNode
+
+        self.origin = MemberBasis.NodeToCoordinate(iNode)
+
+        self.e_i  = MemberBasis.NodeToCoordinate(jNode) - self.origin
+        self.L    = np.linalg.norm(self.e_i)  # beam length
+        self.e_i /= self.L
+
+        if ik_ref is None:              # this replicates PyNite default
+            if 1 - abs(self.e_i[2]) < 1E-8: # vertical beam, or almost
+                ref = np.asarray([self.e_i[2],0,0], dtype=np.float64)
+            else:
+                ref = np.asarray([0,0,-1], dtype=np.float64)
+        else:
+            ref = np.asarray(ik_ref, dtype=np.float64) - self.origin
+
+        self.e_j = np.cross(ref, ref - self.e_i)
+        self.e_k = np.cross(self.e_i, self.e_j)
+
+        self.e_j /= np.linalg.norm(self.e_j)
+        self.e_k /= np.linalg.norm(self.e_k)
+
+        dirCos = [self.e_i, self.e_j, self.e_k]
+
+        self.T = np.zeros((12, 12), dtype=np.float64)
+        self.T[0:3,  0:3 ] = dirCos
+        self.T[3:6,  3:6 ] = dirCos
+        self.T[6:9,  6:9 ] = dirCos
+        self.T[9:12, 9:12] = dirCos
+
+        # T is orthonormal, so just transpose to get the inverse
+        self.T_inverse = self.T.transpose()
+
+        # Equivalent 4x4 transformation matrix
+        #self.T_gl = np.asarray([[*self.e_i,0],[*self.e_j,0],[*self.e_k,0],[*self.origin,1]]).transpose()
+
+#%%
+    def ToGlobal(self, coordinate):
+        """
+        Translate from local coordinate system to global coordinates
+
+        Parameters
+        ----------
+        coordinate : 3D coordinate (numpy 1D array)
+            coordinate in local space
+
+        Returns
+        -------
+        coord : 3D coordinate (numpy 1D array)
+            coordinate in global space
+        """
+        return self.origin + matmul(coordinate, self.T[0:3,0:3])
+
+# %%
+class Member3D(MemberBasis):
     """
     A class representing a 3D frame element in a finite element model.
     """
 #%%
-    def __init__(self, Name, iNode, jNode, E, G, Iy, Iz, J, A):
+    __plt = None # Don't import PyPlot unless and until actually needed
+
+    @staticmethod
+    def __axis():
+        if Member3D.__plt is None:
+            import matplotlib.pyplot as plt
+            Member3D.__plt = plt
+
+        fig, ax = Member3D.__plt.subplots()
+        return ax
+
+#%%
+    def __init__(self, Name, iNode, jNode, material, section, ik_ref=None):
         """
         Initializes a new member.
         """
+        MemberBasis.__init__(self, iNode, jNode, ik_ref)
         
         self.Name = Name    # A unique name for the member given by the user
         self.ID = None      # Unique index number for the member assigned by the program
-        self.iNode = iNode  # The element's i-node
-        self.jNode = jNode  # The element's j-node
-        self.E = E  # The modulus of elasticity of the element
-        self.G = G  # The shear modulus of the element
-        self.Iy = Iy    # The y-axis moment of inertia
-        self.Iz = Iz    # The z-axis moment of inertia
-        self.J = J  # The polar moment of inertia or torsional constant
-        self.A = A  # The cross-sectional area
-        self.L = ((jNode.X-iNode.X)**2+(jNode.Y-iNode.Y)**2+(jNode.Z-iNode.Z)**2)**0.5  # Length of the element
+        self.M = material   # Material class object
+        self.S = section    # Section class object
         self.PtLoads = []   # A list of point loads & moments applied to the element (Direction, P, x) or (Direction, M, x)
         self.DistLoads = [] # A list of linear distributed loads applied to the element (Direction, w1, w2, x1, x2)
         self.SegmentsZ = [] # A list of mathematically continuous beam segments for z-bending
         self.SegmentsY = [] # A list of mathematically continuous beam segments for y-bending
         self.FER = zeros((12,1)) # The fixed end reaction vector
         self.Releases = [False, False, False, False, False, False, False, False, False, False, False, False]
+
+#%%  
+    def Display(self, view):
+        """
+        Displays the member in 3D
+
+        Parameters
+        ----------
+        view : View (VisPy Canvas)
+            3D canvas view for plotting member in
+        """
+        self.S.Display(view, self)
 
 #%%
     def k(self):
@@ -74,12 +204,12 @@ class Member3D():
         """
         
         # Get the properties needed to form the local stiffness matrix
-        E = self.E
-        G = self.G
-        Iy = self.Iy
-        Iz = self.Iz
-        J = self.J
-        A = self.A
+        E = self.M.E
+        G = self.M.G
+        Iy = self.S.Iyy
+        Iz = self.S.Izz
+        J = self.S.J
+        A = self.S.A
         L = self.L
         
         # Create the uncondensed local stiffness matrix
@@ -296,67 +426,27 @@ class Member3D():
        """
 
        # Calculate and return the local displacement vector
-       return matmul(self.T(), self.D())
+       return matmul(self.T, self.D())
         
-#%%  
-    # Transformation matrix
-    def T(self):
-        
-        x1 = self.iNode.X
-        x2 = self.jNode.X
-        y1 = self.iNode.Y
-        y2 = self.jNode.Y
-        z1 = self.iNode.Z
-        z2 = self.jNode.Z
-        L = self.L
-        
-        # Calculate direction cosines for the transformation matrix
-        l = (x2-x1)/L
-        m = (y2-y1)/L
-        n = (z2-z1)/L
-        D = (l**2+m**2)**0.5
-        
-        if l == 0 and m == 0 and n > 0:
-            dirCos = matrix([[0, 0, 1],
-                             [0, 1, 0],
-                             [-1, 0, 0]])
-        elif l == 0 and m == 0 and n < 0:
-            dirCos = matrix([[0, 0, -1],
-                             [0, 1, 0],
-                             [1, 0, 0]])
-        else:
-            dirCos = matrix([[l, m, n],
-                             [-m/D, l/D, 0],
-                             [-l*n/D, -m*n/D, D]])
-        
-        # Build the transformation matrix
-        transMatrix = zeros((12, 12))
-        transMatrix[0:3, 0:3] = dirCos
-        transMatrix[3:6, 3:6] = dirCos
-        transMatrix[6:9, 6:9] = dirCos
-        transMatrix[9:12, 9:12] = dirCos
-        
-        return transMatrix
-
 #%%
     # Member global stiffness matrix
     def K(self):
         
         # Calculate and return the stiffness matrix in global coordinates
-        return matmul(matmul(transpose(self.T()), self.k()), self.T())
+        return matmul(matmul(self.T_inverse, self.k()), self.T)
 
 #%%
     def F(self):
         
         # Calculate and return the global force vector
-        return matmul(inv(self.T()), self.f())
+        return matmul(self.T_inverse, self.f())
     
 #%% 
     # Global fixed end reaction vector
     def FER(self):
         
         # Calculate and return the fixed end reaction vector
-        return matmul(inv(self.T()), self.fer())
+        return matmul(self.T_inverse, self.fer())
 
 #%%
     def D(self):
@@ -502,7 +592,7 @@ class Member3D():
         Plots the shear diagram for the member
         """
         
-        fig, ax = plt.subplots()
+        ax = Member3D.__axis()
         ax.axhline(0, color='black', lw=1)
         ax.grid()
         
@@ -514,10 +604,10 @@ class Member3D():
             x.append(self.L / 19 * i)
             V.append(self.Shear(Direction, self.L / 19 * i))
 
-        plt.plot(x, V)
-        plt.ylabel('Shear')
-        plt.xlabel('Location')
-        plt.show()    
+        Member3D.__plt.plot(x, V)
+        Member3D.__plt.ylabel('Shear')
+        Member3D.__plt.xlabel('Location')
+        Member3D.__plt.show()    
         
 #%%
     def Moment(self, Direction, x):
@@ -632,7 +722,7 @@ class Member3D():
         Plots the moment diagram for the member
         """
         
-        fig, ax = plt.subplots()
+        ax = Member3D.__axis()
         ax.axhline(0, color='black', lw=1)
         ax.grid()
         
@@ -645,10 +735,10 @@ class Member3D():
             x.append(self.L / 19 * i)
             M.append(self.Moment(Direction, self.L / 19 * i))
 
-        plt.plot(x, M)
-        plt.ylabel('Moment')
-        plt.xlabel('Location')
-        plt.show()
+        Member3D.__plt.plot(x, M)
+        Member3D.__plt.ylabel('Moment')
+        Member3D.__plt.xlabel('Location')
+        Member3D.__plt.show()
 
 #%%
     def Deflection(self, Direction, x):
@@ -746,7 +836,7 @@ class Member3D():
         Plots the deflection diagram for the member
         """
         
-        fig, ax = plt.subplots()
+        ax = Member3D.__axis()
         ax.axhline(0, color='black', lw=1)
         ax.grid()
         
@@ -759,10 +849,10 @@ class Member3D():
             x.append(self.L / 19 * i)
             d.append(self.Deflection(Direction, self.L / 19 * i))
 
-        plt.plot(x, d)
-        plt.ylabel('Deflection')
-        plt.xlabel('Location')
-        plt.show()
+        Member3D.__plt.plot(x, d)
+        Member3D.__plt.ylabel('Deflection')
+        Member3D.__plt.xlabel('Location')
+        Member3D.__plt.show()
         
 #%%    
     # Divides the element up into mathematically continuous segments along each axis
@@ -770,9 +860,9 @@ class Member3D():
         
         # Get the member's length and stiffness properties
         L = self.L
-        E = self.E
-        Iz = self.Iz
-        Iy = self.Iy
+        E = self.M.E
+        Iz = self.S.Izz
+        Iy = self.S.Iyy
         SegmentsZ = self.SegmentsZ
         SegmentsY = self.SegmentsY
         
