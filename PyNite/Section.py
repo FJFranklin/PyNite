@@ -24,9 +24,6 @@ class Section(object):
         Cross-sectional area
     """
 #%%
-    __scene = None  # Don't import VisPy unless and until actually needed
-
-#%%
     def __init__(self):
         self.Iyy = 0
         self.Izz = 0
@@ -36,32 +33,49 @@ class Section(object):
         self._outline = None
 
 #%%  
-    def __display(self, view, vertices, faces):
-        if Section.__scene is None:
-            from vispy import scene
-            Section.__scene  = scene
-
-        if len(faces) == 2: # just draw a single line between two points
-            Section.__scene.visuals.Line(pos=vertices[faces], color='black', parent=view.scene)
-        else:
-            faces = [*faces, faces[0]]
-            Section.__scene.visuals.Line(pos=vertices[faces], color='black', parent=view.scene)
+    def __line(self, view, vertices, indices):
+        if len(indices) == 2: # just draw a single line between two points
+            view.Line(vertices[indices])
+        else: # close the loop, and draw
+            indices = [*indices, indices[0]]
+            view.Line(vertices[indices])
 
 #%%  
-    def Display(self, view, basis):
+    def __face(self, view, vertices, indices, color, center=None):
+        # first close the loop
+        indices = [*indices, indices[0]]
+
+        if center is None:
+            center = vertices[indices[0]]
+            vertex = vertices[indices[1:]]
+            vcount = len(indices) - 1
+        else:
+            vertex = vertices[indices]
+            vcount = len(indices)
+
+        for i in range(0, vcount-1):
+            triangle = np.asarray([center,vertex[i],vertex[i+1]])
+            view.Add(triangle, color)
+
+#%%  
+    def Display(self, view, wireframe, basis, color):
         """
         Displays the section in 3D
 
         Parameters
         ----------
-        view : View (VisPy Canvas)
-            3D canvas view for plotting section in
+        view : Viewer3D
+            3D viewer for plotting members
+        wireframe : boolean
+            If true, only plot wireframe
         basis : MemberBasis
             Member3D or basis object with coordinate system and member length
+        color : [r,g,b,a] array
+            Color to use for displaying section
         """
 
         if self._outline is None:
-            self.__display(view, basis.ToGlobal(np.asarray([[0,0,0],[basis.L,0,0]])), [0,1])
+            self.__line(view, basis.ToGlobal(np.asarray([[0,0,0],[basis.L,0,0]])), [0,1])
         else:
             outline = self._outline[0]
             count   = len(outline)
@@ -79,17 +93,20 @@ class Section(object):
             # Tube
 
             for i in range(0, count):
-                if i == 0:
-                    faces = [count-1, count+count-1, count, 0]
-                else:
-                    faces = [i-1, count+i-1, count+i, i]
+                self.__line(view, end_pts, [i,i+count])
 
-                self.__display(view, end_pts, faces)
+                if not wireframe:
+                    if i == 0:
+                        indices = [count-1, count+count-1, count, 0]
+                    else:
+                        indices = [i-1, count+i-1, count+i, i]
+
+                    self.__face(view, end_pts, indices, color)
 
             # Ends
 
-            self.__display(view, end_pts, range(0,count))
-            self.__display(view, end_pts, range(2*count-1,count-1,-1))
+            self.__line(view, end_pts, range(0,count))
+            self.__line(view, end_pts, range(2*count-1,count-1,-1))
 
             if len(self._outline) > 1: # Hollow section
                 outline = self._outline[1]
@@ -107,8 +124,8 @@ class Section(object):
 
                 # Ends
 
-                self.__display(view, end_pts, range(0,count))
-                self.__display(view, end_pts, range(2*count-1,count-1,-1))
+                self.__line(view, end_pts, range(0,count))
+                self.__line(view, end_pts, range(2*count-1,count-1,-1))
 
 # %%
 def Generic(Iyy, Izz, J, A):

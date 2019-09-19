@@ -159,16 +159,18 @@ class Member3D(MemberBasis):
         self.Releases = [False, False, False, False, False, False, False, False, False, False, False, False]
 
 #%%  
-    def Display(self, view):
+    def Display(self, view, wireframe):
         """
         Displays the member in 3D
 
         Parameters
         ----------
-        view : View (VisPy Canvas)
-            3D canvas view for plotting member in
+        view : Viewer3D
+            3D viewer for plotting members
+        wireframe : boolean
+            If true, only plot wireframe
         """
-        self.S.Display(view, self)
+        self.S.Display(view, wireframe, self, self.M.color())
 
 #%%
     def k(self):

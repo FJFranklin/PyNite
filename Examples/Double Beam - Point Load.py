@@ -26,7 +26,8 @@ from PyNite.Material import Material
 
 parser = argparse.ArgumentParser(description="Beam simply supported at either end, loaded in the middle.")
 
-parser.add_argument('--draw-frame',   help='Draw 3D wire frame of members.',                               action='store_true')
+parser.add_argument('--draw-frame',   help='Draw 3D frame of members.',                                    action='store_true')
+parser.add_argument('--wire-frame',   help='Draw 3D wire frame of members.',                               action='store_true')
 parser.add_argument('--plot-results', help='Plot shear, moment & displacement results (left; vertical).',  action='store_true')
 parser.add_argument('--lhs-rotate',   help='Rotate beam through 90 degrees (left).',                       action='store_true')
 parser.add_argument('--rhs-rotate',   help='Rotate beam through 90 degrees (right).',                      action='store_true')
@@ -105,9 +106,12 @@ SimpleBeam.DefineSupport("N3", True, True, True, True, False, False)
 F = -1E3 # load, e.g., a hanging weight of approx 100 kg
 SimpleBeam.AddNodeLoad("N2", "FZ", F)
 
-if args.draw_frame:
+if args.wire_frame:
     # Draw interactive wire-frame showing sections
-    SimpleBeam.Display()
+    SimpleBeam.Display(True)
+elif args.draw_frame:
+    # Draw interactive frame showing sections
+    SimpleBeam.Display(False)
 
 # Expected moment
 M = -F * L / 4

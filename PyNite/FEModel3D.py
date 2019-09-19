@@ -10,6 +10,7 @@ from numpy.linalg import inv
 from PyNite.Node3D import Node3D
 from PyNite.Member3D import Member3D
 from .Material import Material
+from .Viewer3D import Viewer3D
 from . import Section
 
 # %%
@@ -18,27 +19,6 @@ class FEModel3D():
     A class representing a 3D finite element model.
     """
 #%%
-    __scene = None  # Don't import VisPy unless and until actually needed
-
-    @staticmethod
-    def __canvas():
-        if FEModel3D.__scene is None:
-            from vispy import scene
-            FEModel3D.__scene  = scene
-
-        canvas = FEModel3D.__scene.SceneCanvas(keys='interactive', size=(1200, 900), show=True)
-
-        # Set up a viewbox to display the cube with interactive arcball
-        view = canvas.central_widget.add_view()
-        view.bgcolor = '#efefef'
-        view.camera  = FEModel3D.__scene.cameras.turntable.TurntableCamera(scale_factor=10)
-        view.padding = 10
-
-        FEModel3D.__scene.visuals.XYZAxis(parent=view.scene)
-
-        return canvas, view
-
-#%% 
     def __init__(self):
         """
         Initializes a new 3D finite element model.
@@ -660,13 +640,18 @@ class FEModel3D():
             member.SegmentMember()
 
 #%%  
-    def Display(self):
+    def Display(self, wireframe=True):
         """
         Displays the members in 3D
+
+        Parameters
+        ----------
+        wireframe : boolean
+            If true, only plot wireframe
         """
-        canvas, view = FEModel3D.__canvas()
+        V = Viewer3D()
 
         for member in self.__Members:
-            member.Display(view)
+            member.Display(V, wireframe)
 
-        canvas.app.run()
+        V.Run()
