@@ -26,6 +26,7 @@ from PyNite.Material import Material
 
 parser = argparse.ArgumentParser(description="Beam simply supported at either end, loaded in the middle.")
 
+parser.add_argument('--draw-stress',  help='Draw 3D frame of members indicating stress.', default=None,    choices=['seq', 'sxx'])
 parser.add_argument('--draw-frame',   help='Draw 3D frame of members.',                                    action='store_true')
 parser.add_argument('--wire-frame',   help='Draw 3D wire frame of members.',                               action='store_true')
 parser.add_argument('--plot-results', help='Plot shear, moment & displacement results (left; vertical).',  action='store_true')
@@ -103,7 +104,7 @@ SimpleBeam.DefineSupport("N1", True, True, True, True, False, False)
 SimpleBeam.DefineSupport("N3", True, True, True, True, False, False)
 
 # Add a point load at the midspan of the beam
-F = -1E3 # load, e.g., a hanging weight of approx 100 kg
+F = -100E3 # load, e.g., a hanging weight of approx 100 kg
 SimpleBeam.AddNodeLoad("N2", "FZ", F)
 
 if args.wire_frame:
@@ -140,3 +141,7 @@ if args.plot_results:
 # Print reactions at each end of the beam
 print("Left Support Reaction: {Rxn:.2f} N".format(Rxn = SimpleBeam.GetNode("N1").RxnFZ))
 print("Right Support Reacton: {Rxn:.2f} N".format(Rxn = SimpleBeam.GetNode("N3").RxnFZ))
+
+if args.draw_stress is not None:
+    # Draw interactive wire-frame showing sections
+    SimpleBeam.DisplayResults(args.draw_stress)

@@ -55,7 +55,7 @@ class Section(object):
 
         for i in range(0, vcount-1):
             triangle = np.asarray([center,vertex[i],vertex[i+1]])
-            view.Add(triangle, color)
+            view.Add(triangle, [color])
 
 #%%  
     def Display(self, view, wireframe, basis, color):
@@ -126,6 +126,115 @@ class Section(object):
 
                 self.__line(view, end_pts, range(0,count))
                 self.__line(view, end_pts, range(2*count-1,count-1,-1))
+
+#%%
+    def _stress(self, XFM, result, yield_stress):
+        x  = XFM[0]
+        Fx = XFM[1]
+        Fy = XFM[2]
+        Fz = XFM[3]
+        Mx = XFM[4]
+        My = XFM[5]
+        Mz = XFM[6]
+
+        count = len(self._outline[0])
+
+        v = np.zeros((count,3))
+        s = np.zeros(count)
+
+        for i in range(0, count):
+            coord = self._outline[0][i]
+            y = float(coord[0])
+            z = float(coord[1])
+            r = (x**2 + y**2)**0.5
+
+            sigma_x = Fx / self.A - y * Mz / self.Izz - z * My / self.Iyy
+
+            tau_rtheta = r * Mx / self.J # TODO: Check/Correct
+
+            # TODO: include effects of shear forces
+
+            if result == 'seq':
+                s[i] = (sigma_x**2 + 3 * tau_rtheta**2)**0.5
+            elif result == 'sxx':
+                s[i] = sigma_x
+
+            v[i,0] = x
+            v[i,1] = y
+            v[i,2] = z
+
+        if result == 'seq':
+            c_min = 0
+            c_max = yield_stress
+        else:
+            c_min = -yield_stress
+            c_max =  yield_stress
+        s = (np.minimum(c_max, np.maximum(c_min, s)) - c_min) / (c_max - c_min)
+
+        return v, s
+
+#%%
+    def DisplayResults(self, view, basis, forces_moments, result, yield_stress):
+        """
+        Displays the section in 3D indicating stress
+
+        Parameters
+        ----------
+        view : Viewer3D
+            3D viewer for plotting members
+        basis : MemberBasis
+            Member3D or basis object with coordinate system and member length
+        forces_moments : [x,Fx,Fy,Fz,Mx,My,Mz] array
+            (Nx,7) array of shear forces and bending moments
+        yield_stress : number
+            Material yield stress for reference
+        result : str
+            Stress to display - one of: 'seq' (von Mises equivalent), 'sxx' (axial)
+        """
+
+        if self._outline is None: # not enough information
+            self.__line(view, basis.ToGlobal(np.asarray([[0,0,0],[basis.L,0,0]])), [0,1])
+        else:
+            vertex = np.zeros((3,3))
+            vcolor = np.zeros((3,4))
+
+            v0, s0 = self._stress(forces_moments[0], result, yield_stress)
+
+            v0 = basis.ToGlobal(v0)
+            s0 = view.ColorFromValue(s0)
+
+            xcount = len(forces_moments)
+            icount = len(v0)
+
+            for x in range(1, xcount):
+                vx, sx = self._stress(forces_moments[x], result, yield_stress)
+
+                vx = basis.ToGlobal(vx)
+                sx = view.ColorFromValue(sx)
+
+                for i in range(0, icount):
+                    if i == 0:
+                        j = icount - 1
+                    else:
+                        j = i - 1
+
+                    vertex[0,:] = v0[i,:]
+                    vertex[1,:] = v0[j,:]
+                    vertex[2,:] = vx[j,:]
+                    vcolor[0,:] = s0[i,:]
+                    vcolor[1,:] = s0[j,:]
+                    vcolor[2,:] = sx[j,:]
+                    view.Add(vertex, vcolor)
+
+                    vertex[0,:] = v0[i,:]
+                    vertex[1,:] = vx[j,:]
+                    vertex[2,:] = vx[i,:]
+                    vcolor[0,:] = s0[i,:]
+                    vcolor[1,:] = sx[j,:]
+                    vcolor[2,:] = sx[i,:]
+                    view.Add(vertex, vcolor)
+
+                v0, s0 = vx, sx
 
 # %%
 def Generic(Iyy, Izz, J, A):
@@ -212,7 +321,7 @@ class Rectangular(Section):
 
         self.Iyy = Iyy
         self.Izz = Izz
-        self.J   = self.Iyy + self.Izz
+        self.J   = self.Iyy + self.Izz # TODO: Check/Correct
         self.A   = A
 
         self._outline = [ Rectangular.outline(breadth, depth, radius) ]
@@ -258,7 +367,7 @@ class RHS(Section):
 
         self.Iyy = out_Iyy - in_Iyy
         self.Izz = out_Izz - in_Izz
-        self.J   = self.Iyy + self.Izz
+        self.J   = self.Iyy + self.Izz # TODO: Check/Correct
         self.A   = out_A - in_A
 
         self._outline = [ Rectangular.outline(breadth, depth, radius), Rectangular.outline(breadth - 2 * thickness, depth - 2 * thickness, radius - thickness) ]
@@ -422,7 +531,7 @@ class Universal(Section):
 
         self.Iyy = out_Iyy - in_Iyy
         self.Izz = out_Izz - in_Izz
-        self.J   = self.Iyy + self.Izz
+        self.J   = self.Iyy + self.Izz # TODO: Check/Correct
         self.A   = out_A - in_A
 
         self._outline = [ Universal.outline(breadth, depth, flange, web, radius) ]

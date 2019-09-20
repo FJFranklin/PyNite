@@ -655,3 +655,25 @@ class FEModel3D():
             member.Display(V, wireframe)
 
         V.Run()
+
+#%%  
+    def DisplayResults(self, result='seq'):
+        """
+        Displays the members in 3D indicating stress
+
+        Parameters
+        ----------
+        result : str
+            Stress to display - one of: 'seq' (von Mises equivalent), 'sxx' (axial)
+        """
+        V = Viewer3D()
+
+        for member in self.__Members:
+            member.DisplayResults(V, result)
+
+        if result == 'seq':
+            V.ColorBar('Equivalent (von Mises) Stress / Yield Stress',('0','1'))
+        elif result == 'sxx':
+            V.ColorBar('Axial Stress / Yield Stress',('-1','1'))
+
+        V.Run()

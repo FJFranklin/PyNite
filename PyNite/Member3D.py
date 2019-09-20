@@ -172,6 +172,38 @@ class Member3D(MemberBasis):
         """
         self.S.Display(view, wireframe, self, self.M.color())
 
+#%%  
+    def DisplayResults(self, view, result):
+        """
+        Displays the member in 3D indicating stress
+
+        Parameters
+        ----------
+        view : Viewer3D
+            3D viewer for plotting members
+        result : str
+            Stress to display - one of: 'seq' (von Mises equivalent), 'sxx' (axial)
+        """
+        xcount = 20
+        values = np.zeros((xcount,7))
+
+        endvec = self.f()
+        Fx = endvec[0,0]
+        Mx = endvec[3,0]
+
+        for i in range(0, xcount):
+            x = self.L * i / (xcount - 1)
+
+            values[i,0] = x
+            values[i,1] = Fx
+            values[i,2] = self.Shear('Fy', x)
+            values[i,3] = self.Shear('Fz', x)
+            values[i,4] = Mx
+            values[i,5] = self.Moment('My', x)
+            values[i,6] = self.Moment('Mz', x)
+
+        self.S.DisplayResults(view, self, values, result, self.M.sigma_y)
+
 #%%
     def k(self):
         """

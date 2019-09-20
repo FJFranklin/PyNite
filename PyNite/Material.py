@@ -17,6 +17,8 @@ class Material(object):
         shear modulus
     density : number
         density
+    sigma_y : number
+        yield stress [default: 200E6]
     """
 #%%
     __steel = None
@@ -25,7 +27,7 @@ class Material(object):
     @staticmethod
     def steel():
         """
-        Default material: steel (E=209GPa; G=79.3GPa; density=7850kg/m3)
+        Default material: steel (E=209GPa; G=79.3GPa; density=7850kg/m3; yield=235MPa)
 
         Returns
         -------
@@ -34,13 +36,14 @@ class Material(object):
         """
         if Material.__steel is None:
             Material.__steel = Material(210E9, 79.3E9, 7850)
+            Material.__steel.sigma_y = 235E6
         return Material.__steel
 
 #%%
     @staticmethod
     def aluminium():
         """
-        Default material: aluminium (E=70GPa; G=26GPa; density=2700kg/m3)
+        Default material: aluminium (E=70GPa; G=26GPa; density=2700kg/m3; yield=320MPa)
 
         Returns
         -------
@@ -50,6 +53,7 @@ class Material(object):
         if Material.__aluminium is None:
             Material.__aluminium = Material(70E9, 26E9, 2700)
             Material.__aluminium.set_color((0.9, 0.9, 0.9))
+            Material.__aluminium.sigma_y = 320E6
         return Material.__aluminium
 
 #%%
@@ -68,6 +72,7 @@ class Material(object):
         self.G = G
 
         self.density = density
+        self.sigma_y = 200E6
         self.__color = [0.6,0.6,0.6,1]
 
 #%%
