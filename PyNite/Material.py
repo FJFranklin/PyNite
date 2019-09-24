@@ -15,6 +15,8 @@ class Material(object):
         Young's elastic modulus
     G : number
         shear modulus
+    v : number
+        Poisson's ratio
     density : number
         density
     sigma_y : number
@@ -70,6 +72,8 @@ class Material(object):
         """
         self.E = E
         self.G = G
+
+        self.v = E / (2 * G) - 1
 
         self.density = density
         self.sigma_y = 200E6

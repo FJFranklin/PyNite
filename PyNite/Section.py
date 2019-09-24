@@ -19,7 +19,7 @@ class Section(object):
     Izz : number
         Second moment of area for bending about z-axis
     J : number
-        Polar second moment of area for torsion about x-axis
+        Torsion constant (rather than related polar second moment of area) about x-axis
     A : number
         Cross-sectional area
     """
@@ -317,11 +317,15 @@ class Rectangular(Section):
         """
         Section.__init__(self)
 
+        a = max([breadth, depth]) / 2
+        b = min([breadth, depth]) / 2
+        e = b / a
+
         Iyy, Izz, A = Rectangular.properties(breadth, depth, radius)
 
         self.Iyy = Iyy
         self.Izz = Izz
-        self.J   = self.Iyy + self.Izz # TODO: Check/Correct
+        self.J   = a * b**3 * (16/3 - 3.36 * e * (1 - e**4 / 12))
         self.A   = A
 
         self._outline = [ Rectangular.outline(breadth, depth, radius) ]
@@ -367,7 +371,7 @@ class RHS(Section):
 
         self.Iyy = out_Iyy - in_Iyy
         self.Izz = out_Izz - in_Izz
-        self.J   = self.Iyy + self.Izz # TODO: Check/Correct
+        self.J   = 2 * (breadth + depth) * thickness**3 / 3
         self.A   = out_A - in_A
 
         self._outline = [ Rectangular.outline(breadth, depth, radius), Rectangular.outline(breadth - 2 * thickness, depth - 2 * thickness, radius - thickness) ]
@@ -461,7 +465,7 @@ class CHS(Section):
 
         self.Iyy = out_Iyy - in_Iyy
         self.Izz = out_Izz - in_Izz
-        self.J   = self.Iyy + self.Izz
+        self.J   = np.pi * diameter * thickness**3 / 3
         self.A   = out_A - in_A
 
         self._outline = [ Circular.outline(diameter), Circular.outline(diameter - 2 * thickness) ]
@@ -531,7 +535,7 @@ class Universal(Section):
 
         self.Iyy = out_Iyy - in_Iyy
         self.Izz = out_Izz - in_Izz
-        self.J   = self.Iyy + self.Izz # TODO: Check/Correct
+        self.J   = (2 * breadth * flange**3 + (depth - flange) * web**3) / 3
         self.A   = out_A - in_A
 
         self._outline = [ Universal.outline(breadth, depth, flange, web, radius) ]
