@@ -26,7 +26,7 @@ from PyNite.Material import Material
 
 parser = argparse.ArgumentParser(description="Beam simply supported at either end, loaded in the middle.")
 
-parser.add_argument('--draw-stress',  help='Draw 3D frame of members indicating stress.', default=None,    choices=['seq', 'sxx'])
+parser.add_argument('--draw-stress',  help='Draw 3D frame of members indicating stress.', default=None,    choices=['seq', 'sxx', 'txy', 'tzx'])
 parser.add_argument('--draw-frame',   help='Draw 3D frame of members.',                                    action='store_true')
 parser.add_argument('--wire-frame',   help='Draw 3D wire frame of members.',                               action='store_true')
 parser.add_argument('--plot-results', help='Plot shear, moment & displacement results (left; vertical).',  action='store_true')

@@ -202,7 +202,7 @@ class Member3D(MemberBasis):
             values[i,5] = self.Moment('My', x)
             values[i,6] = self.Moment('Mz', x)
 
-        self.S.DisplayResults(view, self, values, result, self.M.sigma_y)
+        self.S.DisplayResults(view, self, values, result, self.M)
 
 #%%
     def k(self):

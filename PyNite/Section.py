@@ -128,7 +128,21 @@ class Section(object):
                 self.__line(view, end_pts, range(2*count-1,count-1,-1))
 
 #%%
-    def _stress(self, XFM, result, yield_stress):
+    def _torsional_stress(self, Mx, y, z):
+        # This only really works for circular sections
+        tau_xy = -z * Mx / self.J
+        tau_zx =  y * Mx / self.J
+
+        return tau_xy, tau_zx
+
+#%%
+    def _shear_stress(self, material, Fy, Fz, y, z):
+        tau_xy = 0
+        tau_zx = 0
+        return tau_xy, tau_zx
+
+#%%
+    def _stress(self, XFM, result, material):
         x  = XFM[0]
         Fx = XFM[1]
         Fy = XFM[2]
@@ -146,18 +160,23 @@ class Section(object):
             coord = self._outline[0][i]
             y = float(coord[0])
             z = float(coord[1])
-            r = (x**2 + y**2)**0.5
 
             sigma_x = Fx / self.A - y * Mz / self.Izz - z * My / self.Iyy
 
-            tau_rtheta = r * Mx / self.J # TODO: Check/Correct
+            tau_xy, tau_zx = self._shear_stress(material, Fy, Fz, y, z)
 
-            # TODO: include effects of shear forces
+            txy, tzx = self._torsional_stress(Mx, y, z)
+            tau_xy += txy
+            tau_zx += tzx
 
             if result == 'seq':
-                s[i] = (sigma_x**2 + 3 * tau_rtheta**2)**0.5
+                s[i] = (sigma_x**2 + 3 * (tau_xy**2 + tau_zx**2))**0.5
             elif result == 'sxx':
                 s[i] = sigma_x
+            elif result == 'txy':
+                s[i] = tau_xy
+            else: # if result == 'tzx':
+                s[i] = tau_zx
 
             v[i,0] = x
             v[i,1] = y
@@ -165,16 +184,20 @@ class Section(object):
 
         if result == 'seq':
             c_min = 0
-            c_max = yield_stress
-        else:
-            c_min = -yield_stress
-            c_max =  yield_stress
+            c_max = material.sigma_y
+        elif result == 'sxx':
+            c_min = -material.sigma_y
+            c_max =  material.sigma_y
+        else: # use shear yield stress for normalisation
+            c_min = -material.sigma_y / 1.73205080757
+            c_max =  material.sigma_y / 1.73205080757
+
         s = (np.minimum(c_max, np.maximum(c_min, s)) - c_min) / (c_max - c_min)
 
         return v, s
 
 #%%
-    def DisplayResults(self, view, basis, forces_moments, result, yield_stress):
+    def DisplayResults(self, view, basis, forces_moments, result, material):
         """
         Displays the section in 3D indicating stress
 
@@ -186,10 +209,10 @@ class Section(object):
             Member3D or basis object with coordinate system and member length
         forces_moments : [x,Fx,Fy,Fz,Mx,My,Mz] array
             (Nx,7) array of shear forces and bending moments
-        yield_stress : number
-            Material yield stress for reference
         result : str
             Stress to display - one of: 'seq' (von Mises equivalent), 'sxx' (axial)
+        material : Material
+            Material to use for section
         """
 
         if self._outline is None: # not enough information
@@ -198,7 +221,7 @@ class Section(object):
             vertex = np.zeros((3,3))
             vcolor = np.zeros((3,4))
 
-            v0, s0 = self._stress(forces_moments[0], result, yield_stress)
+            v0, s0 = self._stress(forces_moments[0], result, material)
 
             v0 = basis.ToGlobal(v0)
             s0 = view.ColorFromValue(s0)
@@ -207,7 +230,7 @@ class Section(object):
             icount = len(v0)
 
             for x in range(1, xcount):
-                vx, sx = self._stress(forces_moments[x], result, yield_stress)
+                vx, sx = self._stress(forces_moments[x], result, material)
 
                 vx = basis.ToGlobal(vx)
                 sx = view.ColorFromValue(sx)

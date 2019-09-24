@@ -675,5 +675,7 @@ class FEModel3D():
             V.ColorBar('Equivalent (von Mises) Stress / Yield Stress',('0','1'))
         elif result == 'sxx':
             V.ColorBar('Axial Stress / Yield Stress',('-1','1'))
+        else: # if result == 'txy' or result == 'tzx':
+            V.ColorBar('Shear Stress / Shear Yield Stress',('-1','1'))
 
         V.Run()
