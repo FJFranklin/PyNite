@@ -43,10 +43,13 @@ class Viewer3D(object):
         self.__vcolor = None
 
 #%% 
-    def Run(self):
+    def Run(self, smooth=True):
         if self.__vertex is not None:
             data = Viewer3D.__geometry.MeshData(vertices=self.__vertex, vertex_colors=self.__vcolor)
-            mesh = Viewer3D.__scene.visuals.Mesh(meshdata=data, shading='smooth', parent=self.__view.scene)
+            if smooth:
+                mesh = Viewer3D.__scene.visuals.Mesh(meshdata=data, shading='smooth', parent=self.__view.scene)
+            else:
+                mesh = Viewer3D.__scene.visuals.Mesh(meshdata=data, parent=self.__view.scene)
 
         self.__canvas.app.run()
 

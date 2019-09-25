@@ -459,6 +459,20 @@ class Circular(Section):
 
         self.diameter = diameter
 
+#%%
+    def _shear_stress(self, material, Fy, Fz, y, z):
+        r2 = y * y + z * z
+        z2 = z * z
+        y2 = y * y
+        v = material.v
+        # From Timoshenko & Goodier, Theory of Elasticity
+        # TODO: check signs
+        y_tau_xy = (-Fy / self.Izz) * ((1 + 2 * v) / (4 * (1 + v))) * z * y
+        y_tau_zx = ( Fy / self.Izz) * ((3 + 2 * v) / (8 * (1 + v))) * (r2 - y2 - z2 * (1 - 2 * v) / (3 + 2 * v))
+        z_tau_xy = (-Fz / self.Iyy) * ((1 + 2 * v) / (4 * (1 + v))) * z * y
+        z_tau_zx = ( Fz / self.Iyy) * ((3 + 2 * v) / (8 * (1 + v))) * (r2 - z2 - y2 * (1 - 2 * v) / (3 + 2 * v))
+        return (y_tau_xy + z_tau_xy), (y_tau_zx + z_tau_zx)
+
 # %%
 class CHS(Section):
     """
@@ -495,6 +509,20 @@ class CHS(Section):
 
         self.diameter  = diameter
         self.thickness = thickness
+
+#%%
+    def _shear_stress(self, material, Fy, Fz, y, z):
+        r2 = y * y + z * z
+        s2 = z * z / r2
+        c2 = y * y / r2
+        sc = y * z / r2
+        # Formula estimated from FEA results; effect of thickness not included
+        # TODO: check signs
+        y_mean = Fy / self.A
+        z_mean = Fz / self.A
+        tau_xy = y_mean * s2 * 2 - z_mean * sc * 2
+        tau_zx = z_mean * c2 * 2 - y_mean * sc * 2
+        return tau_xy, tau_zx
 
 # %%
 class Universal(Section):

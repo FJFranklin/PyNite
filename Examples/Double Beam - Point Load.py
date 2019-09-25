@@ -58,9 +58,9 @@ elif args.lhs_section == 'Rounded':
 elif args.lhs_section == 'RHS':
     lhs_section = Section.RHS(0.3, 0.1, 0.005, 0.01) # 300mm x 100mm x 10mm, 5mm thick
 elif args.lhs_section == 'Circular':
-    lhs_section = Section.Circular(0.4) # 400mm
+    lhs_section = Section.Circular(0.03) # 30mm
 elif args.lhs_section == 'CHS':
-    lhs_section = Section.CHS(0.5, 0.03) # 500mm, 30mm thick
+    lhs_section = Section.CHS(0.08, 0.005) # 80mm diameter, 5mm thick
 else: # 'Universal'
     lhs_section = Section.Universal(0.1138, 0.2068, 0.0096, 0.0063, 0.0076) # breadth / depth / flange / web [/ root radius]
 
@@ -71,9 +71,9 @@ elif args.rhs_section == 'Rounded':
 elif args.rhs_section == 'RHS':
     rhs_section = Section.RHS(0.3, 0.1, 0.005, 0.01) # 300mm x 100mm x 10mm, 5mm thick
 elif args.rhs_section == 'Circular':
-    rhs_section = Section.Circular(0.4) # 400mm
+    rhs_section = Section.Circular(0.03) # 30mm
 elif args.rhs_section == 'CHS':
-    rhs_section = Section.CHS(0.5, 0.03) # 500mm, 30mm thick
+    rhs_section = Section.CHS(0.08, 0.005) # 80mm diameter, 5mm thick
 else: # 'Universal'
     rhs_section = Section.Universal(0.1138, 0.2068, 0.0096, 0.0063, 0.0076) # breadth / depth / flange / web [/ root radius]
 

@@ -678,4 +678,4 @@ class FEModel3D():
         else: # if result == 'txy' or result == 'tzx':
             V.ColorBar('Shear Stress / Shear Yield Stress',('-1','1'))
 
-        V.Run()
+        V.Run(False) # switch off the shader
