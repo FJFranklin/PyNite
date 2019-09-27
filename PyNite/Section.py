@@ -292,7 +292,7 @@ class Rectangular(Section):
     """
 #%%
     @staticmethod
-    def outline(b, d, r):
+    def outline(b, d, r, t=0):
         hw = b / 2
         ht = d / 2
 
@@ -304,8 +304,10 @@ class Rectangular(Section):
 
             pts = [ [-rw, ht], [-rw-sr, rt+cr], [-rw-cr, rt+sr], [-hw, rt], [-hw,-rt], [-rw-cr,-rt-sr], [-rw-sr,-rt-cr], [-rw,-ht],
                     [ rw,-ht], [ rw+sr,-rt-cr], [ rw+cr,-rt-sr], [ hw,-rt], [ hw, rt], [ rw+cr, rt+sr], [ rw+sr, rt+cr], [ rw, ht]  ]
+        elif t > 0:
+            pts = [ [hw,ht], [hw-t,ht], [0,ht], [-hw+t,ht], [-hw,ht], [-hw,ht-t], [-hw,0], [-hw,-ht+t], [-hw,-ht], [-hw+t,-ht], [0,-ht], [hw-t,-ht], [hw,-ht], [hw,-ht+t], [hw,0], [hw,ht-t] ]
         else:
-            pts = [ [hw,ht], [-hw,ht], [-hw,-ht], [hw,-ht] ]
+            pts = [ [hw,ht], [0,ht], [-hw,ht], [-hw,0], [-hw,-ht], [0,-ht], [hw,-ht], [hw,0] ]
 
         return pts
 
@@ -397,12 +399,61 @@ class RHS(Section):
         self.J   = 2 * (breadth + depth) * thickness**3 / 3
         self.A   = out_A - in_A
 
-        self._outline = [ Rectangular.outline(breadth, depth, radius), Rectangular.outline(breadth - 2 * thickness, depth - 2 * thickness, radius - thickness) ]
+        self._outline = [ Rectangular.outline(breadth, depth, radius, thickness), Rectangular.outline(breadth - 2 * thickness, depth - 2 * thickness, radius - thickness) ]
 
         self.breadth   = breadth
         self.depth     = depth
         self.radius    = radius
         self.thickness = thickness
+
+#%%
+    def _shear_stress(self, material, Fy, Fz, y, z):
+        tau_xy = 0
+        tau_zx = 0
+
+        sign = -1
+
+        if y < 0:
+            y = -y
+            sign = -sign
+        if z < 0:
+            z = -z
+            sign = -sign
+
+        if self.radius == 0:
+            # Stress at surface, estimated from FEA + thin-walled shear-flow theory
+            # TODO: check signs
+
+            z_tau_xy = sign * (Fz / self.Iyy) * ((self.depth - self.thickness) / 2) * y
+            z_tau_zx = (Fz / self.Iyy) * (((self.depth - self.thickness) / 2) * (self.breadth / 2 - self.thickness) + ((self.depth / 2 + z) / 2) * (self.depth / 2 - z))
+
+            y_tau_xy = (Fy / self.Izz) * (((self.breadth - self.thickness) / 2) * (self.depth / 2 - self.thickness) + ((self.breadth / 2 + y) / 2) * (self.breadth / 2 - y))
+            y_tau_zx = sign * (Fy / self.Izz) * ((self.breadth - self.thickness) / 2) * z
+
+            # corner stress effect:
+            eb = (self.breadth / 2 - y) / self.thickness
+            ed = (self.depth / 2   - z) / self.thickness
+            if eb < 2.2:
+                ebFz = eb * (1 / 1.1 - eb / 4.84)
+            else:
+                ebFz = 1
+            if eb < 2:
+                ebFx = eb * (1 - eb / 4)
+            else:
+                ebFx = 1
+            if ed < 2:
+                edFz = ed * (1 - ed / 4)
+            else:
+                edFz = 1
+            if ed < 2.2:
+                edFx = ed * (1 / 1.1 - ed / 4.84)
+            else:
+                edFx = 1
+
+            tau_xy = z_tau_xy * ebFz + y_tau_xy * edFx
+            tau_zx = z_tau_zx * edFz + y_tau_zx * ebFx
+
+        return tau_xy, tau_zx
 
 # %%
 class Circular(Section):

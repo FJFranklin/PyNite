@@ -42,12 +42,12 @@ args = parser.parse_args()
 # Option to twist beam through 90 degrees
 # default: unless the beam itself is vertical, the beam and gravity define the zx-plane
 if args.lhs_rotate:
-    lhs_ref = [0,10,0]
+    lhs_ref = [0,10,0.1]
 else:
     lhs_ref = None
 
 if args.rhs_rotate:
-    rhs_ref = [0,10,0]
+    rhs_ref = [0,10,0.1]
 else:
     rhs_ref = None
 
@@ -56,7 +56,7 @@ if args.lhs_section == 'Rectangle':
 elif args.lhs_section == 'Rounded':
     lhs_section = Section.Rectangular(0.2, 0.2, 0.01) # 200mm x 200mm x 10mm
 elif args.lhs_section == 'RHS':
-    lhs_section = Section.RHS(0.3, 0.1, 0.005, 0.01) # 300mm x 100mm x 10mm, 5mm thick
+    lhs_section = Section.RHS(0.1, 0.05, 0.005) # 100mm x 50mm, 5mm thick
 elif args.lhs_section == 'Circular':
     lhs_section = Section.Circular(0.03) # 30mm
 elif args.lhs_section == 'CHS':
@@ -69,7 +69,7 @@ if args.rhs_section == 'Rectangle':
 elif args.rhs_section == 'Rounded':
     rhs_section = Section.Rectangular(0.2, 0.2, 0.01) # 200mm x 200mm x 10mm
 elif args.rhs_section == 'RHS':
-    rhs_section = Section.RHS(0.3, 0.1, 0.005, 0.01) # 300mm x 100mm x 10mm, 5mm thick
+    rhs_section = Section.RHS(0.1, 0.05, 0.005) # 100mm x 50mm, 5mm thick
 elif args.rhs_section == 'Circular':
     rhs_section = Section.Circular(0.03) # 30mm
 elif args.rhs_section == 'CHS':
