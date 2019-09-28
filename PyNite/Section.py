@@ -406,6 +406,47 @@ class RHS(Section):
         self.radius    = radius
         self.thickness = thickness
 
+    def __shear(self, Iyy, b, d, Fz, y, z, sign): # shear stresses (at surface only)
+        t = self.thickness
+        r = self.radius
+
+        if r > t: # rounded (hollow) rectangle - guesswork... TODO: Check/Correct!
+            ylim = (b / 2 - r)
+            zlim = (d / 2 - r)
+            if y < ylim: # top edge
+                tau_xy = sign * (Fz / Iyy) * ((d - t) / 2) * y
+                tau_zx = 0
+            elif z < zlim: # right edge
+                a1t_top    = ((d - t) / 2) * ylim
+                a1t_corner = (np.pi / 4) * zlim * (2 * r - t) + (r * (r - t) + t * t / 3)
+                a1t_right  = ((zlim + z) / 2) * (zlim - z)
+                tau_xy = 0
+                tau_zx = (Fz / Iyy) * (a1t_top + a1t_corner + a1t_right)
+            else:
+                a1t_top    = ((d - t) / 2) * ylim
+                a1t_corner = (np.pi / 4) * zlim * (2 * r - t) + (r * (r - t) + t * t / 3)
+                lim_xy = sign * (Fz / Iyy) * a1t_top
+                lim_zx = (Fz / Iyy) * (a1t_top + a1t_corner)
+                tau_xy = lim_xy * (z - zlim) / r
+                tau_zx = lim_zx * (y - ylim) / r
+
+        else: # non-rounded RHS
+            # Stress at surface, estimated from FEA + thin-walled shear-flow theory
+            # TODO: check signs
+            tau_xy = sign * (Fz / Iyy) * ((d - t) / 2) * y
+            tau_zx = (Fz / Iyy) * (((d - t) / 2) * (b / 2 - t) + ((d / 2 + z) / 2) * (d / 2 - z))
+
+            # corner stress effect:
+            eb = (b / 2 - y) / t
+            ed = (d / 2 - z) / t
+
+            if eb < 2.2:
+                tau_xy *= eb * (1 / 1.1 - eb / 4.84)
+            if ed < 2:
+                tau_zx *= ed * (1 - ed / 4)
+
+        return tau_xy, tau_zx
+
 #%%
     def _shear_stress(self, material, Fy, Fz, y, z):
         tau_xy = 0
@@ -420,40 +461,10 @@ class RHS(Section):
             z = -z
             sign = -sign
 
-        if self.radius == 0:
-            # Stress at surface, estimated from FEA + thin-walled shear-flow theory
-            # TODO: check signs
+        z_tau_xy, z_tau_zx = self.__shear(self.Iyy, self.breadth, self.depth, Fz, y, z, sign)
+        y_tau_zx, y_tau_xy = self.__shear(self.Izz, self.depth, self.breadth, Fy, z, y, sign)
 
-            z_tau_xy = sign * (Fz / self.Iyy) * ((self.depth - self.thickness) / 2) * y
-            z_tau_zx = (Fz / self.Iyy) * (((self.depth - self.thickness) / 2) * (self.breadth / 2 - self.thickness) + ((self.depth / 2 + z) / 2) * (self.depth / 2 - z))
-
-            y_tau_xy = (Fy / self.Izz) * (((self.breadth - self.thickness) / 2) * (self.depth / 2 - self.thickness) + ((self.breadth / 2 + y) / 2) * (self.breadth / 2 - y))
-            y_tau_zx = sign * (Fy / self.Izz) * ((self.breadth - self.thickness) / 2) * z
-
-            # corner stress effect:
-            eb = (self.breadth / 2 - y) / self.thickness
-            ed = (self.depth / 2   - z) / self.thickness
-            if eb < 2.2:
-                ebFz = eb * (1 / 1.1 - eb / 4.84)
-            else:
-                ebFz = 1
-            if eb < 2:
-                ebFx = eb * (1 - eb / 4)
-            else:
-                ebFx = 1
-            if ed < 2:
-                edFz = ed * (1 - ed / 4)
-            else:
-                edFz = 1
-            if ed < 2.2:
-                edFx = ed * (1 / 1.1 - ed / 4.84)
-            else:
-                edFx = 1
-
-            tau_xy = z_tau_xy * ebFz + y_tau_xy * edFx
-            tau_zx = z_tau_zx * edFz + y_tau_zx * ebFx
-
-        return tau_xy, tau_zx
+        return (z_tau_xy + y_tau_xy), (z_tau_zx + y_tau_zx)
 
 # %%
 class Circular(Section):
