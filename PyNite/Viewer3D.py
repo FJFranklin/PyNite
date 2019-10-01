@@ -4,6 +4,8 @@ Created September 2019
 @author: fjf
 """
 # %%
+import sys
+
 import numpy as np
 
 # %%
@@ -15,12 +17,16 @@ class Viewer3D(object):
     scaling = 10    # VisPy rendering very poor when values < 1, so scale up
     __scene = None  # Don't import VisPy unless and until actually needed
     __geometry = None
+    __io = None
+    __gloo = None
 #%% 
-    def __init__(self):
+    def __init__(self, background='#cfcfef', scaling=20, el_az=None):
         if Viewer3D.__scene is None:
-            from vispy import scene, geometry
+            from vispy import scene, geometry, io, gloo
             Viewer3D.__scene     = scene
             Viewer3D.__geometry  = geometry
+            Viewer3D.__io        = io
+            Viewer3D.__gloo      = gloo
 
             # Available colormaps in Vispy:
             # autumn, blues, cool, greens, reds, spring, summer, fire, grays, hot, ice, winter, light_blues,
@@ -29,13 +35,19 @@ class Viewer3D(object):
             from vispy.color import Colormap
             self.__cmap = Colormap(['blue','cyan','green','yellow','red'])
 
+        if el_az is None:
+            el = 30
+            az = 45
+        else:
+            el, az = el_az
+
         self.__canvas = Viewer3D.__scene.SceneCanvas(keys='interactive', size=(1200, 900), show=True)
 
         # Set up a viewbox to display the cube with interactive arcball
         self.__view = self.__canvas.central_widget.add_view()
-        self.__view.bgcolor = '#cfcfef'
-        self.__view.camera  = Viewer3D.__scene.cameras.turntable.TurntableCamera(scale_factor=10)
-        self.__view.padding = 10
+        self.__view.bgcolor = background
+        self.__view.camera  = Viewer3D.__scene.cameras.turntable.TurntableCamera(scale_factor=scaling, elevation=el, azimuth=az)
+        self.__view.padding = 5
 
         Viewer3D.__scene.visuals.XYZAxis(parent=self.__view.scene)
 
@@ -43,7 +55,7 @@ class Viewer3D(object):
         self.__vcolor = None
 
 #%% 
-    def Run(self, smooth=True):
+    def Run(self, smooth=True, save_as=None):
         if self.__vertex is not None:
             data = Viewer3D.__geometry.MeshData(vertices=self.__vertex, vertex_colors=self.__vcolor)
             if smooth:
@@ -51,7 +63,11 @@ class Viewer3D(object):
             else:
                 mesh = Viewer3D.__scene.visuals.Mesh(meshdata=data, parent=self.__view.scene)
 
-        self.__canvas.app.run()
+        if save_as is None:
+            self.__canvas.app.run()
+        else:
+            image = self.__canvas.render() # sort-of works, but problematic
+            Viewer3D.__io.write_png(save_as, image)
 
 #%% 
     def Line(self, vertices, color=None):
@@ -125,8 +141,13 @@ class Viewer3D(object):
         # Overlays a grid to position subviews & widgets:
         grid = self.__canvas.central_widget.add_grid(margin=10)
 
-        # Positioning of text in colorbar is unhelpful; this hackery seems to make it look okay, however
-        cbar = Viewer3D.__scene.widgets.ColorBarWidget(self.__cmap, 'left', clim=c_min_max_str, label=('\n\n '+description), axis_ratio=0.075, padding=[0.5,0.5], border_width=1)
+        if sys.platform == "darwin":
+            # On OSX, positioning of text in colorbar is unhelpful; this hackery seems to make it look okay, however
+            label = '\n\n ' + description
+        else:
+            label = description
+
+        cbar = Viewer3D.__scene.widgets.ColorBarWidget(self.__cmap, 'left', clim=c_min_max_str, label=label, axis_ratio=0.075, padding=[0.5,0.5], border_width=1)
 
         grid.add_widget(cbar, col=0)
         # which centers the colorbar unless we add something else to effectively nudge it to the left:
