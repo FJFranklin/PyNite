@@ -9,8 +9,16 @@ parser = argparse.ArgumentParser(description="Extract section parameters from Bl
 parser.add_argument('--section',      help='Specify section type.',    default=None, choices=['UB', 'RHS', 'SHS', 'CHS'])
 parser.add_argument('--source',       help='Specify input file name.', type=str)
 parser.add_argument('--name',         help='Specify internal name.',   type=str, default='unspecified')
+parser.add_argument('--cold',         help='Assume cold-formed.',      action='store_true')
 
 args = parser.parse_args()
+
+# This is guesswork - TODO: Check difference in manufacturing
+# 
+if args.cold:   # cold-formed:  RHS radius is 2.5 times the thickness
+    rhs_r = 2.5
+else:           # hot-finished: RHS radius is 1.5 times the thickness
+    rhs_r = 1.5
 
 wb = xl.load_workbook(filename=args.source)
 ws = wb.active
@@ -33,25 +41,25 @@ def add_minor_UB(row, major):
 
 def add_minor_RHS(row, major):
     wh = major.split()
-    W = float(wh[0]) / 1E3
-    H = float(wh[2]) / 1E3
+    W = float(wh[2]) / 1E3
+    H = float(wh[0]) / 1E3
     T = float(row[ 1]) / 1E3
     A = float(row[ 4]) / 1E4
     Y = float(row[ 7]) / 1E8
     Z = float(row[ 8]) / 1E8
     J = float(row[15]) / 1E8
-    R = 2 * T
+    R = rhs_r * T
     print('        S[\'{major}\'][\'{minor}\'] = RHS({w:.3e}, {h:.3e}, {t:.3e}, {r:.3e}, area={a:.3e}, Iyy={y:.3e}, Izz={z:.3e}, J={j:.3e})'.format(major=major, minor=row[1], w=W, h=H, t=T, r=R, a=A, y=Y, z=Z, j=J))
 
 def add_minor_SHS(row, major):
     wh = major.split()
-    W = float(wh[0]) / 1E3
-    H = float(wh[2]) / 1E3
+    W = float(wh[2]) / 1E3
+    H = float(wh[0]) / 1E3
     T = float(row[ 1]) / 1E3
     A = float(row[ 4]) / 1E4
     I = float(row[ 6]) / 1E8
     J = float(row[10]) / 1E8
-    R = 2 * T
+    R = rhs_r * T
     print('        S[\'{major}\'][\'{minor}\'] = RHS({w:.3e}, {h:.3e}, {t:.3e}, {r:.3e}, area={a:.3e}, Iyy={y:.3e}, Izz={z:.3e}, J={j:.3e})'.format(major=major, minor=row[1], w=W, h=H, t=T, r=R, a=A, y=I, z=I, j=J))
 
 def add_minor_CHS(row, major):

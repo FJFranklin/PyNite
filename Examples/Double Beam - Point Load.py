@@ -54,6 +54,14 @@ if args.rhs_rotate:
 else:
     rhs_ref = None
 
+#UB    = Section.BlueBook.UniversalBeam()
+#CHS_C = Section.BlueBook.CHS_ColdFormed()
+#CHS_H = Section.BlueBook.CHS_HotFinished()
+#RHS_C = Section.BlueBook.RHS_ColdFormed()
+#RHS_H = Section.BlueBook.RHS_HotFinished()
+SHS_C = Section.BlueBook.SHS_ColdFormed()
+#SHS_H = Section.BlueBook.SHS_HotFinished()
+
 if args.lhs_section == 'Rectangle':
     if args.lhs_rounded:
         lhs_section = Section.Rectangular(0.3, 0.1, 0.01) # 300mm x 100mm x 10mm
