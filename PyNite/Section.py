@@ -42,7 +42,7 @@ class Section(object):
         self._outline = None
 
 #%%
-    def _set_or_compare(self, Iyy, Izz, A, J, print_comparison=True):
+    def _set_or_compare(self, Iyy, Izz, A, J, print_comparison=False):
         if self.Iyy > 0:
             err = 100 * (Iyy - self.Iyy) / self.Iyy
             if print_comparison and abs(err) > 0.5:
@@ -387,10 +387,9 @@ class Rectangular(Section):
 
         Iyy, Izz, A = Rectangular.properties(breadth, depth, radius)
 
-        self.Iyy = Iyy
-        self.Izz = Izz
-        self.J   = a * b**3 * (16/3 - 3.36 * e * (1 - e**4 / 12))
-        self.A   = A
+        J = a * b**3 * (16/3 - 3.36 * e * (1 - e**4 / 12))
+
+        self._set_or_compare(Iyy, Izz, A, J)
 
         self._outline = [ Rectangular.outline(breadth, depth, radius) ]
 
@@ -552,10 +551,7 @@ class Circular(Section):
 
         Iyy, Izz, A = Circular.properties(diameter)
 
-        self.Iyy = Iyy
-        self.Izz = Izz
-        self.J   = self.Iyy + self.Izz
-        self.A   = A
+        self._set_or_compare(Iyy, Izz, A, Iyy + Izz)
 
         self._outline = [ Circular.outline(diameter) ]
 
@@ -680,13 +676,13 @@ class Universal(Section):
         """
         Section.__init__(self, **kwargs)
 
-        out_Iyy, out_Izz, out_A = Rectangular.properties(breadth, depth, radius)
-        in_Iyy,  in_Izz,  in_A  = Rectangular.properties(breadth - web, depth - 2 * flange, radius)
+        out_Iyy, out_Izz, out_A = Rectangular.properties(breadth, depth, 0)
+        in_Iyy,  in_,     in_A  = Rectangular.properties(breadth - web, depth - 2 * flange, radius)
 
-        self.Iyy = out_Iyy - in_Iyy
-        self.Izz = out_Izz - in_Izz
-        self.J   = (2 * breadth * flange**3 + (depth - flange) * web**3) / 3
-        self.A   = out_A - in_A
+        in_1,    in_Izz,  in_2  = Rectangular.properties(breadth, depth - 2 * flange, 0)
+        in_1,   web_Izz,  in_2  = Rectangular.properties(web, depth - 2 * flange, 0)
+
+        self._set_or_compare(out_Iyy - in_Iyy, out_Izz - in_Izz + web_Izz, out_A - in_A, (2 * breadth * flange**3 + (depth - flange) * web**3) / 3)
 
         self._outline = [ Universal.outline(breadth, depth, flange, web, radius) ]
 

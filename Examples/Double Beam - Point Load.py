@@ -32,8 +32,8 @@ parser.add_argument('--wire-frame',   help='Draw 3D wire frame of members.',    
 parser.add_argument('--plot-results', help='Plot shear, moment & displacement results (left; vertical).',  action='store_true')
 parser.add_argument('--lhs-rotate',   help='Rotate beam through 90 degrees (left).',                       action='store_true')
 parser.add_argument('--rhs-rotate',   help='Rotate beam through 90 degrees (right).',                      action='store_true')
-parser.add_argument('--lhs-section',  help='Specify section for beam on left  [RHS].',    default='RHS',   choices=['Rectangle', 'RHS', 'Circular', 'CHS', 'Universal'])
-parser.add_argument('--rhs-section',  help='Specify section for beam on right [RHS].',    default='RHS',   choices=['Rectangle', 'RHS', 'Circular', 'CHS', 'Universal'])
+parser.add_argument('--lhs-section',  help='Specify section for beam on left  [RHS].',    default='RHS',   choices=['Rectangle', 'RHS', 'Circular', 'CHS', 'Universal', 'BB.RHS.Cold', 'BB.CHS.Hot', 'BB.UB'])
+parser.add_argument('--rhs-section',  help='Specify section for beam on right [RHS].',    default='RHS',   choices=['Rectangle', 'RHS', 'Circular', 'CHS', 'Universal', 'BB.RHS.Cold', 'BB.CHS.Hot', 'BB.UB'])
 parser.add_argument('--lhs-rounded',  help='In case of Rectangular/RHS section, round the corners.',       action='store_true')
 parser.add_argument('--rhs-rounded',  help='In case of Rectangular/RHS section, round the corners.',       action='store_true')
 parser.add_argument('--lhs-material', help='Specify material for beam on left  [steel].', default='steel', choices=['steel', 'aluminium'])
@@ -54,12 +54,12 @@ if args.rhs_rotate:
 else:
     rhs_ref = None
 
-#UB    = Section.BlueBook.UniversalBeam()
+UB    = Section.BlueBook.UniversalBeam()
 #CHS_C = Section.BlueBook.CHS_ColdFormed()
-#CHS_H = Section.BlueBook.CHS_HotFinished()
-#RHS_C = Section.BlueBook.RHS_ColdFormed()
+CHS_H = Section.BlueBook.CHS_HotFinished()
+RHS_C = Section.BlueBook.RHS_ColdFormed()
 #RHS_H = Section.BlueBook.RHS_HotFinished()
-SHS_C = Section.BlueBook.SHS_ColdFormed()
+#SHS_C = Section.BlueBook.SHS_ColdFormed()
 #SHS_H = Section.BlueBook.SHS_HotFinished()
 
 if args.lhs_section == 'Rectangle':
@@ -76,6 +76,12 @@ elif args.lhs_section == 'Circular':
     lhs_section = Section.Circular(0.03) # 30mm
 elif args.lhs_section == 'CHS':
     lhs_section = Section.CHS(0.08, 0.005) # 80mm diameter, 5mm thick
+elif args.lhs_section == 'BB.RHS.Cold':
+    lhs_section = RHS_C['100  x  50']['5.0']
+elif args.lhs_section == 'BB.CHS.Hot':
+    lhs_section = CHS_H['76.1']['5.0']
+elif args.lhs_section == 'BB.UB':
+    lhs_section = UB['203 x 133']['x 30']
 else: # 'Universal'
     lhs_section = Section.Universal(0.1138, 0.2068, 0.0096, 0.0063, 0.0076) # breadth / depth / flange / web [/ root radius]
 
@@ -93,6 +99,12 @@ elif args.rhs_section == 'Circular':
     rhs_section = Section.Circular(0.03) # 30mm
 elif args.rhs_section == 'CHS':
     rhs_section = Section.CHS(0.08, 0.005) # 80mm diameter, 5mm thick
+elif args.rhs_section == 'BB.RHS.Cold':
+    rhs_section = RHS_C['100  x  50']['5.0']
+elif args.rhs_section == 'BB.CHS.Hot':
+    rhs_section = CHS_H['76.1']['5.0']
+elif args.rhs_section == 'BB.UB':
+    rhs_section = UB['203 x 133']['x 30']
 else: # 'Universal'
     rhs_section = Section.Universal(0.1138, 0.2068, 0.0096, 0.0063, 0.0076) # breadth / depth / flange / web [/ root radius]
 
