@@ -26,21 +26,52 @@ from PyNite.Material import Material
 
 parser = argparse.ArgumentParser(description="Beam simply supported at either end, loaded in the middle.")
 
-parser.add_argument('--draw-stress',  help='Draw 3D frame of members indicating stress.', default=None,    choices=['seq', 'sxx', 'txy', 'tzx'])
-parser.add_argument('--draw-frame',   help='Draw 3D frame of members.',                                    action='store_true')
-parser.add_argument('--wire-frame',   help='Draw 3D wire frame of members.',                               action='store_true')
-parser.add_argument('--plot-results', help='Plot shear, moment & displacement results (left; vertical).',  action='store_true')
-parser.add_argument('--lhs-rotate',   help='Rotate beam through 90 degrees (left).',                       action='store_true')
-parser.add_argument('--rhs-rotate',   help='Rotate beam through 90 degrees (right).',                      action='store_true')
-parser.add_argument('--lhs-section',  help='Specify section for beam on left  [RHS].',    default='RHS',   choices=['Rectangle', 'RHS', 'Circular', 'CHS', 'Universal', 'BB.RHS.Cold', 'BB.CHS.Hot', 'BB.UB'])
-parser.add_argument('--rhs-section',  help='Specify section for beam on right [RHS].',    default='RHS',   choices=['Rectangle', 'RHS', 'Circular', 'CHS', 'Universal', 'BB.RHS.Cold', 'BB.CHS.Hot', 'BB.UB'])
-parser.add_argument('--lhs-rounded',  help='In case of Rectangular/RHS section, round the corners.',       action='store_true')
-parser.add_argument('--rhs-rounded',  help='In case of Rectangular/RHS section, round the corners.',       action='store_true')
-parser.add_argument('--lhs-material', help='Specify material for beam on left  [steel].', default='steel', choices=['steel', 'aluminium'])
-parser.add_argument('--rhs-material', help='Specify material for beam on right [steel].', default='steel', choices=['steel', 'aluminium'])
-parser.add_argument('--dual-case',    help='Alternative load case with extra nodes.',                      action='store_true')
+parser.add_argument('--draw-stress',  help='Draw 3D frame of members indicating stress.', default=None,          choices=['seq', 'sxx', 'txy', 'tzx'])
+parser.add_argument('--draw-frame',   help='Draw 3D frame of members.',                                          action='store_true')
+parser.add_argument('--wire-frame',   help='Draw 3D wire frame of members.',                                     action='store_true')
+parser.add_argument('--plot-results', help='Plot shear, moment & displacement results (left; vertical).',        action='store_true')
+parser.add_argument('--lhs-rotate',   help='Rotate beam through 90 degrees (left).',                             action='store_true')
+parser.add_argument('--rhs-rotate',   help='Rotate beam through 90 degrees (right).',                            action='store_true')
+parser.add_argument('--lhs-section',  help='Specify section for beam on left  [RHS].',    default='RHS',         choices=['Rectangle', 'RHS', 'Circular', 'CHS', 'Universal', 'BB.RHS.Cold', 'BB.CHS.Hot', 'BB.UB'])
+parser.add_argument('--rhs-section',  help='Specify section for beam on right [RHS].',    default='RHS',         choices=['Rectangle', 'RHS', 'Circular', 'CHS', 'Universal', 'BB.RHS.Cold', 'BB.CHS.Hot', 'BB.UB'])
+parser.add_argument('--lhs-rounded',  help='In case of Rectangular/RHS section, round the corners.',             action='store_true')
+parser.add_argument('--rhs-rounded',  help='In case of Rectangular/RHS section, round the corners.',             action='store_true')
+parser.add_argument('--lhs-material', help='Specify material for beam on left  [steel].', default='steel',       choices=['steel', 'aluminium'])
+parser.add_argument('--rhs-material', help='Specify material for beam on right [steel].', default='steel',       choices=['steel', 'aluminium'])
+parser.add_argument('--case',         help='Specify load case [U2B.Z.-100k].',            default='U2B.Z.-100k', choices=['U2B.Z.-100k','U2B.Y.-100k','U4B.Z.-+50k','U4B.Y.-+50k','F4B.Z.+-10k','F4B.Y.+-10k'])
 
 args = parser.parse_args()
+
+if args.case == 'U2B.Z.-100k':
+    case_TwoBeams = True
+    case_Y_Load   = 0
+    case_Z_Load   = -100E3
+    case_EndFixed = False
+elif args.case == 'U2B.Y.-100k':
+    case_TwoBeams = True
+    case_Y_Load   = -100E3
+    case_Z_Load   = 0
+    case_EndFixed = False
+elif args.case == 'U4B.Z.-+50k':
+    case_TwoBeams = False
+    case_Y_Load   = 0
+    case_Z_Load   = -50E3
+    case_EndFixed = False
+elif args.case == 'U4B.Y.-+50k':
+    case_TwoBeams = False
+    case_Y_Load   = -50E3
+    case_Z_Load   = 0
+    case_EndFixed = False
+elif args.case == 'F4B.Z.+-10k':
+    case_TwoBeams = False
+    case_Y_Load   = 0
+    case_Z_Load   = 10E3
+    case_EndFixed = True
+else: # args.case == 'F4B.Y.+-10k':
+    case_TwoBeams = False
+    case_Y_Load   = 10E3
+    case_Z_Load   = 0
+    case_EndFixed = True
 
 # Option to twist beam through 90 degrees
 # default: unless the beam itself is vertical, the beam and gravity define the zx-plane
@@ -75,7 +106,7 @@ elif args.lhs_section == 'RHS':
 elif args.lhs_section == 'Circular':
     lhs_section = Section.Circular(0.03) # 30mm
 elif args.lhs_section == 'CHS':
-    lhs_section = Section.CHS(0.08, 0.005) # 80mm diameter, 5mm thick
+    lhs_section = Section.CHS(0.1, 0.005) # 100mm diameter, 5mm thick
 elif args.lhs_section == 'BB.RHS.Cold':
     lhs_section = RHS_C['100  x  50']['5.0']
 elif args.lhs_section == 'BB.CHS.Hot':
@@ -98,7 +129,7 @@ elif args.rhs_section == 'RHS':
 elif args.rhs_section == 'Circular':
     rhs_section = Section.Circular(0.03) # 30mm
 elif args.rhs_section == 'CHS':
-    rhs_section = Section.CHS(0.08, 0.005) # 80mm diameter, 5mm thick
+    rhs_section = Section.CHS(0.1, 0.005) # 100mm diameter, 5mm thick
 elif args.rhs_section == 'BB.RHS.Cold':
     rhs_section = RHS_C['100  x  50']['5.0']
 elif args.rhs_section == 'BB.CHS.Hot':
@@ -127,7 +158,7 @@ SimpleBeam.AddNode("N1", -L/2, 0.1, 0.1)
 SimpleBeam.AddNode("N2",  0,   0.1, 0.1)
 SimpleBeam.AddNode("N3",  L/2, 0.1, 0.1)
 
-if args.dual_case:
+if not case_TwoBeams:
     SimpleBeam.AddNode("N4", -L/4, 0.1, 0.1)
     SimpleBeam.AddNode("N5",  L/4, 0.1, 0.1)
 
@@ -137,20 +168,30 @@ if args.dual_case:
     SimpleBeam.AddMemberExt("M4", "N5", "N3", rhs_material, rhs_section, rhs_ref) #        [default: None]
 
     # Add opposite point loads at the 1/4 & 3/4 points of the beam
-    F = -50E3 # load, e.g., a hanging weight of approx 5 tonnes
-    SimpleBeam.AddNodeLoad("N4", "FZ",  F)
-    SimpleBeam.AddNodeLoad("N5", "FZ", -F)
+    if case_Y_Load != 0:
+        SimpleBeam.AddNodeLoad("N4", "FY",  case_Y_Load)
+        SimpleBeam.AddNodeLoad("N5", "FY", -case_Y_Load)
+    if case_Z_Load != 0:
+        SimpleBeam.AddNodeLoad("N4", "FZ",  case_Z_Load)
+        SimpleBeam.AddNodeLoad("N5", "FZ", -case_Z_Load)
 else:
     SimpleBeam.AddMemberExt("M1", "N1", "N2", lhs_material, lhs_section, lhs_ref) # *_ref: optional argument
     SimpleBeam.AddMemberExt("M2", "N2", "N3", rhs_material, rhs_section, rhs_ref) #        [default: None]
 
     # Add a point load at the midspan of the beam
-    F = -100E3 # load, e.g., a hanging weight of approx 10 tonnes
-    SimpleBeam.AddNodeLoad("N2", "FZ", F)
+    if case_Y_Load != 0:
+        SimpleBeam.AddNodeLoad("N2", "FY", case_Y_Load)
+    if case_Z_Load != 0:
+        SimpleBeam.AddNodeLoad("N2", "FZ", case_Z_Load)
 
-# Provide simple supports - can't displace or twist at either end
-SimpleBeam.DefineSupport("N1", True, True, True, True, False, False)
-SimpleBeam.DefineSupport("N3", True, True, True, True, False, False)
+if case_EndFixed:
+    # Provide simple supports - completely fixed ends
+    SimpleBeam.DefineSupport("N1", True, True, True, True, True, True)
+    SimpleBeam.DefineSupport("N3", True, True, True, True, True, True)
+else:
+    # Provide simple supports - can't displace or twist at either end
+    SimpleBeam.DefineSupport("N1", True, True, True, True, False, False)
+    SimpleBeam.DefineSupport("N3", True, True, True, True, False, False)
 
 if args.wire_frame:
     # Draw interactive wire-frame showing sections
@@ -159,18 +200,22 @@ elif args.draw_frame:
     # Draw interactive frame showing sections
     SimpleBeam.Display(False)
 
-# Expected moment
-M = -F * L / 4
-# Expected deflection - only if materials and sections are same and same orientation
-if args.lhs_rotate:
-    delta = F * L**3 / (48 * lhs_material.E * lhs_section.Izz)
-else:
-    delta = F * L**3 / (48 * lhs_material.E * lhs_section.Iyy)
-print('Expected deflection = {d:.2f} mm; max. bending moment = {m:.2f}'.format(d=(delta * 1E3), m=M))
+if case_TwoBeams:
+    # Expected moment
+    MY = -case_Z_Load * L / 4
+    MZ = -case_Y_Load * L / 4
+    # Expected deflection - only if materials and sections are same and same orientation
+    if args.lhs_rotate:
+        delta_Y = case_Y_Load * L**3 / (48 * lhs_material.E * lhs_section.Iyy)
+        delta_Z = case_Z_Load * L**3 / (48 * lhs_material.E * lhs_section.Izz)
+    else:
+        delta_Y = case_Y_Load * L**3 / (48 * lhs_material.E * lhs_section.Izz)
+        delta_Z = case_Z_Load * L**3 / (48 * lhs_material.E * lhs_section.Iyy)
+    print('Expected deflection: dy = {dy:.2f} mm, dz = {dz:.2f} mm; max. bending moment: My = {my:.2f} kNm, Mz = {mz:.2f} kNm.'.format(dy=(delta_Y * 1E3), dz=(delta_Z * 1E3), my=(MY / 1E3), mz=(MZ / 1E3)))
 
 # Analyze the beam
 SimpleBeam.Analyze()
-print('Deflection from analysis = {d:.2f} mm'.format(d=(SimpleBeam.GetNode("N2").DZ * 1E3)))
+print('Analysed deflection: dy = {dy:.2f} mm, dz = {dz:.2f} mm.'.format(dy=(SimpleBeam.GetNode("N2").DY * 1E3), dz=(SimpleBeam.GetNode("N2").DZ * 1E3)))
 
 if args.plot_results:
     # Plot the shear, moment, and deflection diagrams
@@ -184,8 +229,8 @@ if args.plot_results:
         SimpleBeam.GetMember("M1").PlotDeflection("dz")
 
 # Print reactions at each end of the beam
-print("Left Support Reaction: {Rxn:.2f} N".format(Rxn = SimpleBeam.GetNode("N1").RxnFZ))
-print("Right Support Reacton: {Rxn:.2f} N".format(Rxn = SimpleBeam.GetNode("N3").RxnFZ))
+print("Left  Support Reaction: ({ry:.2f}, {rz:.2f}) kN".format(ry=(SimpleBeam.GetNode("N1").RxnFY / 1E3), rz=(SimpleBeam.GetNode("N1").RxnFZ / 1E3)))
+print("Right Support Reaction: ({ry:.2f}, {rz:.2f}) kN".format(ry=(SimpleBeam.GetNode("N3").RxnFY / 1E3), rz=(SimpleBeam.GetNode("N3").RxnFZ / 1E3)))
 
 if args.draw_stress is not None:
     # Draw interactive wire-frame showing sections

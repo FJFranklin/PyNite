@@ -221,6 +221,8 @@ class Section(object):
             v[i,1] = y
             v[i,2] = z
 
+            #print('{x},{y},{z},{fy},{fz},{sxx},{txy},{tzx}'.format(x=x, y=y, z=z, fy=Fy, fz=Fz, sxx=sigma_x, txy=tau_xy, tzx=tau_zx))
+
         if result == 'seq':
             c_min = 0
             c_max = material.sigma_y
@@ -612,9 +614,8 @@ class CHS(Section):
         c2 = y * y / r2
         sc = y * z / r2
         # Formula estimated from FEA results; effect of thickness not included
-        # TODO: check signs
-        y_mean = Fy / self.A
-        z_mean = Fz / self.A
+        y_mean = -Fy / self.A
+        z_mean = -Fz / self.A
         tau_xy = y_mean * s2 * 2 - z_mean * sc * 2
         tau_zx = z_mean * c2 * 2 - y_mean * sc * 2
         return tau_xy, tau_zx
