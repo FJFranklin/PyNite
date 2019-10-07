@@ -100,9 +100,9 @@ if args.lhs_section == 'Rectangle':
         lhs_section = Section.Rectangular(0.3, 0.1) # 300mm x 100mm
 elif args.lhs_section == 'RHS':
     if args.lhs_rounded:
-        lhs_section = Section.RHS(0.1, 0.05, 0.005, 0.01) # 100mm x 50mm x 10mm, 5mm thick
+        lhs_section = Section.RHS(0.1, 0.1, 0.005, 0.01) # 100mm x 100mm x 10mm, 5mm thick
     else:
-        lhs_section = Section.RHS(0.1, 0.05, 0.005) # 100mm x 50mm, 5mm thick
+        lhs_section = Section.RHS(0.1, 0.1, 0.005) # 100mm x 100mm, 5mm thick
 elif args.lhs_section == 'Circular':
     lhs_section = Section.Circular(0.03) # 30mm
 elif args.lhs_section == 'CHS':
@@ -123,9 +123,9 @@ if args.rhs_section == 'Rectangle':
         rhs_section = Section.Rectangular(0.3, 0.1) # 300mm x 100mm
 elif args.rhs_section == 'RHS':
     if args.rhs_rounded:
-        rhs_section = Section.RHS(0.1, 0.05, 0.005, 0.01) # 100mm x 50mm x 10mm, 5mm thick
+        rhs_section = Section.RHS(0.1, 0.1, 0.005, 0.01) # 100mm x 100mm x 10mm, 5mm thick
     else:
-        rhs_section = Section.RHS(0.1, 0.05, 0.005) # 100mm x 50mm, 5mm thick
+        rhs_section = Section.RHS(0.1, 0.1, 0.005) # 100mm x 100mm, 5mm thick
 elif args.rhs_section == 'Circular':
     rhs_section = Section.Circular(0.03) # 30mm
 elif args.rhs_section == 'CHS':

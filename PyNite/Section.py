@@ -455,27 +455,26 @@ class RHS(Section):
             ylim = (b / 2 - r)
             zlim = (d / 2 - r)
             if y < ylim: # top edge
-                tau_xy = sign * (Fz / Iyy) * ((d - t) / 2) * y
+                tau_xy = sign * (-Fz / Iyy) * ((d - t) / 2) * y
                 tau_zx = 0
             elif z < zlim: # right edge
                 a1t_top    = ((d - t) / 2) * ylim
                 a1t_corner = (np.pi / 4) * zlim * (2 * r - t) + (r * (r - t) + t * t / 3)
                 a1t_right  = ((zlim + z) / 2) * (zlim - z)
                 tau_xy = 0
-                tau_zx = (Fz / Iyy) * (a1t_top + a1t_corner + a1t_right)
+                tau_zx = (-Fz / Iyy) * (a1t_top + a1t_corner + a1t_right)
             else:
                 a1t_top    = ((d - t) / 2) * ylim
                 a1t_corner = (np.pi / 4) * zlim * (2 * r - t) + (r * (r - t) + t * t / 3)
                 lim_xy = sign * (Fz / Iyy) * a1t_top
-                lim_zx = (Fz / Iyy) * (a1t_top + a1t_corner)
+                lim_zx = (-Fz / Iyy) * (a1t_top + a1t_corner)
                 tau_xy = lim_xy * (z - zlim) / r
                 tau_zx = lim_zx * (y - ylim) / r
 
         else: # non-rounded RHS
             # Stress at surface, estimated from FEA + thin-walled shear-flow theory
-            # TODO: check signs
-            tau_xy = sign * (Fz / Iyy) * ((d - t) / 2) * y
-            tau_zx = (Fz / Iyy) * (((d - t) / 2) * (b / 2 - t) + ((d / 2 + z) / 2) * (d / 2 - z))
+            tau_xy = sign * (-Fz / Iyy) * ((d - t) / 2) * y
+            tau_zx = (-Fz / Iyy) * (((d - t) / 2) * (b / 2 - t) + ((d / 2 + z) / 2) * (d / 2 - z))
 
             # corner stress effect:
             eb = (b / 2 - y) / t
